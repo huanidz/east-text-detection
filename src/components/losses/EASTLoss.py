@@ -10,7 +10,7 @@ class ClassBalanceCrossEntropyLoss(nn.Module):
         super().__init__()
         
     def forward(self, Y_prediction, Y_groundtruth):
-        beta = 1 - torch.sum(Y_prediction) / (Y_groundtruth.shape[0] * Y_groundtruth.shape[1])
+        beta = 1 - torch.sum(Y_prediction) / (128**2) # Modify the 128 as the neck's output size
         loss = -beta * Y_groundtruth * torch.log(Y_prediction) - (1 - beta)*(1 - Y_groundtruth) * torch.log(1 - Y_prediction)
         return loss.mean()
 

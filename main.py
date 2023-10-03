@@ -31,18 +31,21 @@ if __name__ == "__main__":
     head = EASTHead(neck_out_channels=64)
     output = head(output)
     y_score = output["y_score"]
+    print(f"==>> y_score.shape: {y_score.shape}")
     y_geo = output["y_geo"]
     
+    mask = torch.randint(low=0, high=2, size=(1, 1, 128, 128)).float()
+    
     # ScoreMapPrediction, ScoreMapGT, GeoPrediction, GeoGT
-    random_target = torch.randn((1, 1, 128, 128)).float()
-    random_target_2 = torch.randn((1, 128, 128)).float()
-    CE = nn.CrossEntropyLoss()
-    loss = CE(random_target, torch.softmax(random_target_2, dim=0))
+    random_target = torch.randn((1, 1, 128, 128))
+    # random_target_2 = torch.randn((1, 128, 128)).float()
+    CE = nn.BCEWithLogitsLoss()
+    loss = CE(y_score, mask)
     
     
-    # loss_func = EASTLoss()
-    # loss = loss_func(y_score, random_target)
-    # loss.backward()
+    loss_func = EASTLoss()
+    loss = loss_func(torch.sigmoid(y_score), mask)
+    print(loss.item())
         
         
     
