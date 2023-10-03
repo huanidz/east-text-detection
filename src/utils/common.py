@@ -1,6 +1,7 @@
 from itertools import tee
 import cv2
 import numpy as np
+import math
 
 class AttributeDict(dict):
     __getattr__ = dict.__getitem__
@@ -33,3 +34,19 @@ def scale_contour(cnt, scale):
     cnt_scaled = cnt_scaled.astype(np.int32)
 
     return cnt_scaled
+
+def sorting_quadrangle_TLTRBRBL(quadrangle):
+    
+    sorted_vertices = sorted(quadrangle, key=lambda vertex: vertex[0])
+    left_most_vertices_X = sorted_vertices[:2]
+    
+    sorted_vertices = sorted(quadrangle, key=lambda vertex: vertex[0], reverse=True)
+    right_most_vertices_X = sorted_vertices[:2]
+    
+    left_points_sorted_XY = sorted(left_most_vertices_X, key=lambda point: point[1])
+    right_points_sorted_XY = sorted(right_most_vertices_X, key=lambda point: point[1])
+    
+    TopLeft, BottomLeft = left_points_sorted_XY[0], left_points_sorted_XY[1]
+    TopRight, BottomRight = right_points_sorted_XY[0], right_points_sorted_XY[1]
+    
+    return TopLeft, TopRight, BottomRight, BottomLeft

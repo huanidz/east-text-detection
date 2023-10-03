@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 from typing import List
 from .math import L2_distance, shrink_point
-from .common import scale_contour
+from .common import scale_contour, sorting_quadrangle_TLTRBRBL
 
 # FOR TESTING
 IMG_PATH = "../../data/ICDAR_2015/train_images/img_1.jpg"
