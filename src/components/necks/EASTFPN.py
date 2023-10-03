@@ -75,17 +75,13 @@ class EASTFPN(nn.Module):
         x = self.conv_stage_4(x)        
         
         g1 = self.stage_g1(x) # f1
-        h1 = torch.concat([f2, g1], dim=1)
-        print(f"==>> h1.shape: {h1.shape}")
+        h1 = torch.cat([f2, g1], dim=1)
         h1 = self.merging_conv_h2(h1)
-        print(f"==>> h1.shape: {h1.shape}")
         g2 = self.stage_g2(h1)
-        h2 = torch.concat([f3, g2], dim=1)
+        h2 = torch.cat([f3, g2], dim=1)
         h2 = self.merging_conv_h3(h2)
-        print(f"==>> h2.shape: {h2.shape}")
-        # print(f"==>> h2.shape: {h2.shape}")
         g3 = self.stage_g3(h2)
-        h3 = torch.concat([f4, g3], dim=1)
+        h3 = torch.cat([f4, g3], dim=1)
         h3 = self.merging_conv_h4(h3)
         
         return h3
