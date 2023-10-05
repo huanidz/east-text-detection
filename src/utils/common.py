@@ -50,3 +50,9 @@ def sorting_quadrangle_TLTRBRBL(quadrangle):
     TopRight, BottomRight = right_points_sorted_XY[0], right_points_sorted_XY[1]
     
     return TopLeft, TopRight, BottomRight, BottomLeft
+
+def findCoverRectWithMinimalArea(quadrangle_points):
+    rect = cv2.minAreaRect(quadrangle_points)
+    box = cv2.boxPoints(rect)
+    return box
+    

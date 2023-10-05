@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 from typing import List
 from .math import L2_distance, shrink_point
-from .common import scale_contour, sorting_quadrangle_TLTRBRBL
+from .common import scale_contour, sorting_quadrangle_TLTRBRBL, findCoverRectWithMinimalArea
 
 # FOR TESTING
 IMG_PATH = "../../data/ICDAR_2015/train_images/img_1.jpg"
@@ -73,18 +73,24 @@ def gen_score_map(img_path, label_path):
         Quadrangle = np.array([[p1], [p2], [p3], [p4]])
                 
         # To OpenCV contour (prepare for scaling inward)
-        Inward_Scaled_Quadrangle = scale_contour(Quadrangle, INWARD_MOVING_RATE)        
+        Inward_Scaled_Quadrangle = scale_contour(Quadrangle, INWARD_MOVING_RATE)
+        Scaled_Quadrangles.append(Inward_Scaled_Quadrangle)
         
         # cv2.drawContours(score_map, [Quadrangle], -1, (0, 0, 255), -1, cv2.LINE_AA)
         cv2.drawContours(score_map, [Inward_Scaled_Quadrangle], -1, (255, 255, 255), -1, cv2.LINE_AA)
     
-    return image, score_map
+    return image, score_map, Scaled_Quadrangles
 
-def gen_image_label_pair(img_path, label_path, target_size):
-    image, score_map = gen_score_map(img_path=img_path, label_path=label_path)
+def gen_label(img_path, label_path, target_size):
+    image, score_map, scaled_quadrangles = gen_score_map(img_path=img_path, label_path=label_path)    
     
     image = cv2.resize(image, (target_size, target_size))
     score_map = cv2.resize(score_map, (target_size, target_size))
+    
+    rect_boxes = []
+    for quadrangle in scaled_quadrangles:
+        rect_box = findCoverRectWithMinimalArea(quadrangle)
+        rect_boxes.append(rect_box)
     
     return image, score_map
     
