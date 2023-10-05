@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
-
+from time import perf_counter
 from ...utils.math import L2_distance
 
 
@@ -20,16 +20,23 @@ class NormalizedSmoothL1Loss(nn.Module):
         
         
     def forward(self, Q_prediction, Q_groundtruth):
-        N_Q_gt_star = L2_distance(Q_groundtruth[0], Q_groundtruth[1])
-        for i in range(len(Q_groundtruth)):
-            if i < len(Q_groundtruth) - 1:
-                p_i = Q_groundtruth[i]
-                p_imod4add1 = Q_groundtruth[i + 1]
-            elif i == (len(Q_groundtruth) - 1):
-                p_i = Q_groundtruth[i]
-                p_imod4add1 = Q_groundtruth[0]
+        N_Q_gt_star = torch.abs(torch.sum(L2_distance((Q_groundtruth[:, 0], Q_groundtruth[:, 1]),
+                                  (Q_groundtruth[:, 2], Q_groundtruth[:, 3]))))
+        
+        for i in range(4):
+            if i < 4 - 1:
+                p_i_x = Q_groundtruth[:, 2*i]
+                p_i_y = Q_groundtruth[:, 2*i + 1]
+                p_imod4add1_x = Q_groundtruth[:, 2*i + 2]
+                p_imod4add1_y = Q_groundtruth[:, 2*i + 3]
+            elif i == (4 - 1):
+                p_i_x = Q_groundtruth[:, 2*i]
+                p_i_y = Q_groundtruth[:, 2*i + 1]
+                p_imod4add1_x = Q_groundtruth[:, 0]
+                p_imod4add1_y = Q_groundtruth[:, 1]
                 
-            D_L2 = L2_distance(point_1=p_i, point_2=p_imod4add1)
+            D_L2 = torch.abs(torch.sum(L2_distance(point_1=(p_i_x, p_i_y), 
+                                                   point_2=(p_imod4add1_x, p_imod4add1_y))))
             N_Q_gt_star = min(N_Q_gt_star, D_L2)
         
         abs_diff = torch.abs(Q_prediction - Q_groundtruth)
@@ -45,8 +52,8 @@ class EASTLoss(nn.Module):
         self.L_ScoreMap_Weight = L_ScoreMap_Weight
         self.L_Geo_Weight = L_Geo_Weight    
     
-    def forward(self, ScoreMapPrediction, ScoreMapGT): # GeoPrediction, GeoGT
+    def forward(self, ScoreMapPrediction, ScoreMapGT, GeoPrediction, GeoGT):
         LossScoreMap = self.LossScoreMap(ScoreMapPrediction, ScoreMapGT)
-        # LossGeo = self.LossGeo(GeoPrediction, GeoGT)
-        # final_loss = self.L_ScoreMap_Weight * LossScoreMap + self.L_Geo_Weight * LossGeo
-        return LossScoreMap        
+        LossGeo = self.LossGeo(GeoPrediction, GeoGT)
+        final_loss = self.L_ScoreMap_Weight * LossScoreMap + self.L_Geo_Weight * LossGeo
+        return final_loss        

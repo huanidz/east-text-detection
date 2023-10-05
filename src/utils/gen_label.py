@@ -1,8 +1,7 @@
 import numpy as np
 import cv2
 from typing import List
-from .math import L2_distance, shrink_point
-from .common import scale_contour, sorting_quadrangle_TLTRBRBL, findCoverRectWithMinimalArea
+from .common import scale_contour
 from time import time
 from tqdm import tqdm
 
