@@ -3,6 +3,8 @@ import cv2
 from typing import List
 from .math import L2_distance, shrink_point
 from .common import scale_contour, sorting_quadrangle_TLTRBRBL, findCoverRectWithMinimalArea
+from time import time
+from tqdm import tqdm
 
 # FOR TESTING
 IMG_PATH = "../../data/ICDAR_2015/train_images/img_1.jpg"
@@ -62,7 +64,6 @@ def gen_score_map(img_path, label_path):
     if len(annotations) == 0:
         return np.zeros_like(image)
     
-    Scaled_Quadrangles = []
     for annotation in annotations:
         p1 = [annotation[0]["x"], annotation[0]["y"]]
         p2 = [annotation[1]["x"], annotation[1]["y"]]
@@ -74,25 +75,52 @@ def gen_score_map(img_path, label_path):
                 
         # To OpenCV contour (prepare for scaling inward)
         Inward_Scaled_Quadrangle = scale_contour(Quadrangle, INWARD_MOVING_RATE)
-        Scaled_Quadrangles.append(Inward_Scaled_Quadrangle)
         
-        # cv2.drawContours(score_map, [Quadrangle], -1, (0, 0, 255), -1, cv2.LINE_AA)
         cv2.drawContours(score_map, [Inward_Scaled_Quadrangle], -1, (255, 255, 255), -1, cv2.LINE_AA)
     
-    return image, score_map, Scaled_Quadrangles
+    return image, score_map, annotations
 
 def gen_label(img_path, label_path, target_size):
-    image, score_map, scaled_quadrangles = gen_score_map(img_path=img_path, label_path=label_path)    
+    image, score_map, annotations = gen_score_map(img_path=img_path, label_path=label_path)    
+    H, W, C = image.shape
+    
+    scale_x = 512.0 / W
+    scale_y = 512.0 / H
+    final_scale_x = scale_x * (128.0 / 512.0)
+    final_scale_y = scale_y * (128.0 / 512.0)
     
     image = cv2.resize(image, (target_size, target_size))
-    score_map = cv2.resize(score_map, (target_size, target_size))
+    score_map = cv2.resize(score_map, (128, 128)) # Mask
+    geo_map = np.zeros((8, 128, 128), dtype=np.float32)
     
-    rect_boxes = []
-    for quadrangle in scaled_quadrangles:
-        rect_box = findCoverRectWithMinimalArea(quadrangle)
-        rect_boxes.append(rect_box)
     
-    return image, score_map
+    contours = []
+    for annotation in annotations:
+        # p1 = [int(annotation[0]["x"] * final_scale_x), int(annotation[0]["y"] * final_scale_y)]
+        # p2 = [int(annotation[1]["x"] * final_scale_x), int(annotation[1]["y"] * final_scale_y)]
+        # p3 = [int(annotation[2]["x"] * final_scale_x), int(annotation[2]["y"] * final_scale_y)]
+        # p4 = [int(annotation[3]["x"] * final_scale_x), int(annotation[3]["y"] * final_scale_y)]
+        contours.append(np.array([[[int(annotation[0]["x"] * final_scale_x), int(annotation[0]["y"] * final_scale_y)]], 
+                                  [[int(annotation[1]["x"] * final_scale_x), int(annotation[1]["y"] * final_scale_y)]], 
+                                  [[int(annotation[2]["x"] * final_scale_x), int(annotation[2]["y"] * final_scale_y)]], 
+                                  [[int(annotation[3]["x"] * final_scale_x), int(annotation[3]["y"] * final_scale_y)]]]))
+    
+    #Loop through each contour
+    for contour in contours:
+        
+        rect_x, rect_y, rect_w, rect_h = cv2.boundingRect(contour)
+        # print("len(contour):", len(contour))
+        for i, corner_pts in enumerate(contour):
+            
+            for y in range(rect_y, rect_y + rect_h):
+                for x in range(rect_x, rect_x + rect_w):
+
+                    if cv2.pointPolygonTest(contour, (x, y), False) >= 0:
+                        geo_map[2 * i, y, x] = corner_pts[0][0] - x
+                        geo_map[2 * i + 1, y, x] = corner_pts[0][1] - y
+                        
+    
+    return image, score_map, geo_map
     
             
        
