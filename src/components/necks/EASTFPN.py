@@ -8,7 +8,7 @@ class ConvBlock(nn.Module):
         super().__init__()
         self.conv = nn.Conv2d(in_channels, out_channels, kersize, stride, padding)
         self.bn = nn.BatchNorm2d(out_channels)
-        self.relu = nn.ReLU()
+        self.relu = nn.ReLU(inplace=True)
         
     def forward(self, x):
         x = self.conv(x)
@@ -21,12 +21,10 @@ class DeConvBlock(nn.Module):
         super().__init__()
         self.deconv = nn.ConvTranspose2d(in_channels, out_channels, kersize, stride, padding)
         self.bn = nn.BatchNorm2d(out_channels)
-        self.relu = nn.ReLU()
     
     def forward(self, x):
         x = self.deconv(x)
         x = self.bn(x)
-        x = self.relu(x)
         return x
 
 class EASTFPN(nn.Module):
@@ -37,7 +35,7 @@ class EASTFPN(nn.Module):
     def __init__(self, backbone_out_channels, neck_out_channels) -> None:
         super().__init__()
         
-        self.stem_out_conv = ConvBlock(backbone_out_channels, 16, kersize=7, stride=2, padding=3)
+        self.stem_out_conv = ConvBlock(backbone_out_channels, 16, kersize=7, stride=1, padding=3)
         
         self.conv_stage_1 = ConvBlock(16, out_channels=64, kersize=3, stride=2, padding=1)
         self.conv_stage_2 = ConvBlock(in_channels=64, out_channels=128, kersize=3, stride=2, padding=1)

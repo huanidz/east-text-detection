@@ -55,4 +55,9 @@ def findCoverRectWithMinimalArea(quadrangle_points):
     rect = cv2.minAreaRect(quadrangle_points)
     box = cv2.boxPoints(rect)
     return box
+
+def cal_shortest_edge_length(quadrilateral):
+    quadrilateral = quadrilateral.reshape(-1, 2)
     
+    lengths = np.sqrt(np.sum(np.square(quadrilateral - np.roll(quadrilateral, -1, axis=0)), axis=1))
+    return np.min(lengths)    

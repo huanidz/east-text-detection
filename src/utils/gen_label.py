@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 from typing import List
-from .common import scale_contour
+from .common import scale_contour, cal_shortest_edge_length
 from time import time
 from tqdm import tqdm
 
@@ -75,8 +75,8 @@ def gen_score_map(img_path, label_path):
         # To OpenCV contour (prepare for scaling inward)
         Inward_Scaled_Quadrangle = scale_contour(Quadrangle, INWARD_MOVING_RATE)
         
-        cv2.drawContours(score_map, [Inward_Scaled_Quadrangle], -1, (255, 255, 255), -1, cv2.LINE_AA)
-    
+        cv2.drawContours(score_map, [Inward_Scaled_Quadrangle], -1, (255), -1)
+        
     return image, score_map, annotations
 
 def gen_label(img_path, label_path, target_size):
@@ -91,7 +91,7 @@ def gen_label(img_path, label_path, target_size):
     image = cv2.resize(image, (target_size, target_size))
     score_map = cv2.resize(score_map, (128, 128)) # Mask
     geo_map = np.zeros((8, 128, 128), dtype=np.float32)
-    
+    n_q_star_map = np.zeros((1, 128, 128), dtype=np.float32) # Used for QUAD normalized loss
     
     contours = []
     for annotation in annotations:
@@ -108,7 +108,11 @@ def gen_label(img_path, label_path, target_size):
     for contour in contours:
         
         rect_x, rect_y, rect_w, rect_h = cv2.boundingRect(contour)
-        # print("len(contour):", len(contour))
+        
+        # calculating the N_Q_Star
+        shortest_edge_length = cal_shortest_edge_length(contour)
+        
+        # Building the geo_map
         for i, corner_pts in enumerate(contour):
             
             for y in range(rect_y, rect_y + rect_h):
@@ -117,9 +121,10 @@ def gen_label(img_path, label_path, target_size):
                     if cv2.pointPolygonTest(contour, (x, y), False) >= 0:
                         geo_map[2 * i, y, x] = corner_pts[0][0] - x
                         geo_map[2 * i + 1, y, x] = corner_pts[0][1] - y
+                        n_q_star_map[:, x, y] = shortest_edge_length
                         
     
-    return image, score_map, geo_map
+    return image, score_map, geo_map, n_q_star_map
     
             
        

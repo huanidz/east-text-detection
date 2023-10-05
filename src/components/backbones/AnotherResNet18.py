@@ -54,7 +54,7 @@ class ResNet(nn.Module):
         img_channels: int,
         num_layers: int,
         block: Type[BasicBlock],
-        network_scale_channels:int = 64
+        num_classes: int  = 1000
     ) -> None:
         super(ResNet, self).__init__()
         if num_layers == 18:
@@ -77,20 +77,28 @@ class ResNet(nn.Module):
         )
         self.bn1 = nn.BatchNorm2d(self.in_channels)
         self.relu = nn.ReLU(inplace=True)
-        self.layer1 = self._make_layer(block, 64, layers[0], stride=1)
-        self.layer2 = self._make_layer(block, network_scale_channels, layers[1], stride=1)
-        self.layer3 = self._make_layer(block, network_scale_channels, layers[2], stride=1)
-        self.layer4 = self._make_layer(block, network_scale_channels, layers[3], stride=1)
-
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        self.layer1 = self._make_layer(block, 64, layers[0])
+        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
+        self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
+        self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(512*self.expansion, num_classes)
     def _make_layer(
         self, 
         block: Type[BasicBlock],
         out_channels: int,
         blocks: int,
-        stride: int = 1,
+        stride: int = 1
     ) -> nn.Sequential:
         downsample = None
         if stride != 1:
+            """
+            This should pass from `layer2` to `layer4` or 
+            when building ResNets50 and above. Section 3.3 of the paper
+            Deep Residual Learning for Image Recognition
+            (https://arxiv.org/pdf/1512.03385v1.pdf).
+            """
             downsample = nn.Sequential(
                 nn.Conv2d(
                     self.in_channels, 
@@ -119,8 +127,15 @@ class ResNet(nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
+        x = self.maxpool(x)
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
+        # The spatial dimension of the final layer's feature 
+        # map should be (7, 7) for all ResNets.
+        print('Dimensions of the last convolutional feature map: ', x.shape)
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.fc(x)
         return x
