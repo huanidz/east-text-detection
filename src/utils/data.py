@@ -18,18 +18,17 @@ class EastDataset(Dataset):
         return len(self.image_paths)
     
     def __getitem__(self, idx):
-        image, label_mask, geo_map, n_q_star_map = gen_label(img_path=self.image_paths[idx],
+        # print(f"Current index: {self.image_paths[idx]}")
+        image, score_map, geo_map = gen_label(img_path=self.image_paths[idx],
                                                label_path=self.label_paths[idx],
                                                target_size=self.target_size)
         if self.is_cuda:
             image = torch.from_numpy(image).permute(2, 0, 1).to(dtype=torch.float32).cuda()
-            label_mask = torch.from_numpy(label_mask[np.newaxis, :]).to(dtype=torch.float32).cuda()
+            score_map = torch.from_numpy(score_map[np.newaxis, :]).to(dtype=torch.float32).cuda()
             geo_map = torch.from_numpy(geo_map).to(dtype=torch.float32).cuda()
-            n_q_star_map = torch.from_numpy(n_q_star_map).to(dtype=torch.float32).cuda()
         else:
             image = torch.from_numpy(image).permute(2, 0, 1).to(dtype=torch.float32)
-            label_mask = torch.from_numpy(label_mask[np.newaxis, :]).to(dtype=torch.float32)
+            score_map = torch.from_numpy(score_map[np.newaxis, :]).to(dtype=torch.float32)
             geo_map = torch.from_numpy(geo_map).to(dtype=torch.float32)
-            n_q_star_map = torch.from_numpy(n_q_star_map).to(dtype=torch.float32)
         
-        return image, label_mask, geo_map, n_q_star_map
+        return image, score_map, geo_map

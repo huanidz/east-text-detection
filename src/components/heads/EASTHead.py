@@ -29,7 +29,7 @@ class EASTHead(nn.Module):
         # X is output from neck
         x = self.head_conv(x)
         y_score = self.score_conv(x)
-        y_geo = (self.geo_conv(x) - 0.5) * 2 + 1000 # 1000 here's the hand-pick value for easier loss backward. 
+        y_geo = (self.geo_conv(x) - 0.5) * 2 + 800 # 1000 here's the hand-pick value for easier loss backward. 
         
         return {"y_score":y_score, "y_geo":y_geo}
     

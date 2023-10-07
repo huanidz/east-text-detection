@@ -75,8 +75,12 @@ def gen_score_map(img_path, label_path):
         # To OpenCV contour (prepare for scaling inward)
         Inward_Scaled_Quadrangle = scale_contour(Quadrangle, INWARD_MOVING_RATE)
         
-        cv2.drawContours(score_map, [Inward_Scaled_Quadrangle], -1, (255), -1)
-        
+        cv2.drawContours(score_map, [Inward_Scaled_Quadrangle], -1, 1.0, -1)
+    
+    num_ones = np.count_nonzero(score_map == 1.0)
+
+    print("first:", num_ones)
+    
     return image, score_map, annotations
 
 def gen_label(img_path, label_path, target_size):
@@ -88,21 +92,35 @@ def gen_label(img_path, label_path, target_size):
     final_scale_x = scale_x * (128.0 / 512.0)
     final_scale_y = scale_y * (128.0 / 512.0)
     
+    # Input image
     image = cv2.resize(image, (target_size, target_size))
-    score_map = cv2.resize(score_map, (128, 128)) # Mask
+    img_mean = [0.485, 0.456, 0.406]
+    img_std = [0.229, 0.224, 0.225]
+    image = image / 255.0
+    image = (image - img_mean) / img_std
+    num_ones = np.count_nonzero(score_map == 1.0)
+
+    print("second:", num_ones)
+    score_map = cv2.resize(score_map, (128, 128)) # Mask !NOTE: resize cause value changed due to interpolation step
+    if (score_map.min() == 0.0) and (score_map.max() == 1.0):
+        print("All values are 0.0 or 1.0")
+    else:
+        print("Has other values")
+        
+    num_ones = np.count_nonzero(score_map == 1.0)
+
+    print("second:", num_ones)
+
+    
     geo_map = np.zeros((8, 128, 128), dtype=np.float32)
-    n_q_star_map = np.zeros((1, 128, 128), dtype=np.float32) # Used for QUAD normalized loss
     
     contours = []
     for annotation in annotations:
-        # p1 = [int(annotation[0]["x"] * final_scale_x), int(annotation[0]["y"] * final_scale_y)]
-        # p2 = [int(annotation[1]["x"] * final_scale_x), int(annotation[1]["y"] * final_scale_y)]
-        # p3 = [int(annotation[2]["x"] * final_scale_x), int(annotation[2]["y"] * final_scale_y)]
-        # p4 = [int(annotation[3]["x"] * final_scale_x), int(annotation[3]["y"] * final_scale_y)]
-        contours.append(np.array([[[int(annotation[0]["x"] * final_scale_x), int(annotation[0]["y"] * final_scale_y)]], 
-                                  [[int(annotation[1]["x"] * final_scale_x), int(annotation[1]["y"] * final_scale_y)]], 
-                                  [[int(annotation[2]["x"] * final_scale_x), int(annotation[2]["y"] * final_scale_y)]], 
-                                  [[int(annotation[3]["x"] * final_scale_x), int(annotation[3]["y"] * final_scale_y)]]]))
+        p1 = [int(annotation[0]["x"] * final_scale_x), int(annotation[0]["y"] * final_scale_y)]
+        p2 = [int(annotation[1]["x"] * final_scale_x), int(annotation[1]["y"] * final_scale_y)]
+        p3 = [int(annotation[2]["x"] * final_scale_x), int(annotation[2]["y"] * final_scale_y)]
+        p4 = [int(annotation[3]["x"] * final_scale_x), int(annotation[3]["y"] * final_scale_y)]
+        contours.append(np.array([[p1], [p2], [p3], [p4]]))
     
     #Loop through each contour
     for contour in contours:
@@ -110,7 +128,7 @@ def gen_label(img_path, label_path, target_size):
         rect_x, rect_y, rect_w, rect_h = cv2.boundingRect(contour)
         
         # calculating the N_Q_Star
-        shortest_edge_length = cal_shortest_edge_length(contour)
+        # shortest_edge_length = cal_shortest_edge_length(contour)
         
         # Building the geo_map
         for i, corner_pts in enumerate(contour):
@@ -121,10 +139,9 @@ def gen_label(img_path, label_path, target_size):
                     if cv2.pointPolygonTest(contour, (x, y), False) >= 0:
                         geo_map[2 * i, y, x] = corner_pts[0][0] - x
                         geo_map[2 * i + 1, y, x] = corner_pts[0][1] - y
-                        n_q_star_map[:, x, y] = shortest_edge_length
                         
     
-    return image, score_map, geo_map, n_q_star_map
+    return image, score_map, geo_map
     
             
        

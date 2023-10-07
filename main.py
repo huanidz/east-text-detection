@@ -152,28 +152,29 @@ TEST_END-2-END Training with DataLoader
 IMAGE_PATH = "/home/huan/prjdir/east-text-detection/data/ICDAR_2015/train_images"
 LABEL_PATH = "/home/huan/prjdir/east-text-detection/data/ICDAR_2015/train_label"
 
-EPOCH = 2
+EPOCH = 5
 
 
 if __name__ == "__main__":
+    np.set_printoptions(threshold=np.inf)
     
     model = EASTNet().cuda()
     dataset = EastDataset(images_folder=IMAGE_PATH, annotations_folder=LABEL_PATH, target_size=512, is_cuda=True)
-    dataloader = DataLoader(dataset, batch_size=12, shuffle=True, drop_last=True)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0003)
+    dataloader = DataLoader(dataset, batch_size=1, shuffle=True, drop_last=True)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     criteria = EASTLoss()
     
     for epoch in range(EPOCH):
         running_loss = 0.0
-        for i, (image, label_mask, geo_map, n_q_star_map) in tqdm(enumerate(dataloader)):
-            
+        for i, (image, label_mask, geo_map) in tqdm(enumerate(dataloader)):
             optimizer.zero_grad()
             
             # Forward pass
             output = model(image)
-            loss = criteria(output["y_score"], label_mask, output["y_geo"], geo_map, n_q_star_map)
+            loss = criteria(output["y_score"], label_mask, output["y_geo"], geo_map)
             loss.backward()
             optimizer.step()
+            # raise ValueError("STOP")
             
             running_loss += loss.item()
             if i % 10 == 0:
