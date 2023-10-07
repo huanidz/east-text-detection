@@ -17,7 +17,7 @@ from src.components.necks.EASTFPN import EASTFPN
 from src.components.heads.EASTHead import EASTHead
 from src.components.losses.EASTLoss import EASTLoss
 from src.utils.common import count_parameters, findCoverRectWithMinimalArea
-from src.utils.gen_label import gen_score_map, gen_label
+from src.utils.gen_label import gen_score_map, gen_label, gen_label_V2
 from src.components.net.EAST import EASTNet
 from src.utils.data import EastDataset
 from torchvision.models import resnet18
@@ -85,33 +85,28 @@ from torchvision.models import resnet18
 """
 TESTING GEO MAP LABEL GENERATION
 """
-# IMAGE_PATH = "/home/huan/prjdir/east-text-detection/data/text-detection/train/training_images"
-# LABEL_PATH = "/home/huan/prjdir/east-text-detection/data/text-detection/train/label"
 
-# # IMAGE_PATH = "/home/huan/prjdir/east-text-detection/data/text-detection/train/train_1"
-# # LABEL_PATH = "/home/huan/prjdir/east-text-detection/data/text-detection/train/label_1"
+# IMAGE_PATH = "/home/huan/prjdir/east-text-detection/data/text-detection/train/train_1"
+# LABEL_PATH = "/home/huan/prjdir/east-text-detection/data/text-detection/train/label_1"
 
 # TARGET_SIZE = 512
 
-# PREPROCESSED_DIRECTORY = "data/preprocess"
-# PREPROCESSED_DIRECTORY_TRAIN_IMAGES = f"{PREPROCESSED_DIRECTORY}/train/images"
-# PREPROCESSED_DIRECTORY_TRAIN_LABEL = f"{PREPROCESSED_DIRECTORY}/train/label"
 # if __name__ == "__main__":
-    
-#     os.makedirs(PREPROCESSED_DIRECTORY, exist_ok=True)
-#     os.makedirs(PREPROCESSED_DIRECTORY_TRAIN_IMAGES, exist_ok=True)
-#     os.makedirs(PREPROCESSED_DIRECTORY_TRAIN_LABEL, exist_ok=True)
-#     print("Directories has been created!")
     
 #     image_paths = natsorted(glob(f"{IMAGE_PATH}/*"))
 #     label_paths = natsorted(glob(f"{LABEL_PATH}/*"))
     
 #     for i, (image_path, label_path) in enumerate(zip(image_paths, label_paths)):
 #         print(f"Processing image: {image_path}, label: {label_path}")
-#         image, label_mask, geo_map = gen_label(img_path=image_path, label_path=label_path, target_size=TARGET_SIZE)        
-#         cv2.imwrite(f"{PREPROCESSED_DIRECTORY_TRAIN_IMAGES}/{os.path.basename(image_path)}", image)
-#         np.save(f"{PREPROCESSED_DIRECTORY_TRAIN_LABEL}/{os.path.splitext(os.path.basename(image_path))[0]}.npy", 
-#                 np.concatenate([geo_map, label_mask[np.newaxis, :]], axis=0))
+#         image, score_map, geo_map = gen_label_V2(img_path=image_path, label_path=label_path, target_size=TARGET_SIZE)
+#     print(f"==>> image.shape: {image.shape}")
+#     print(f"==>> score_map.shape: {score_map.shape}")
+#     print(f"==>> geo_map.shape: {geo_map.shape}")
+
+    
+#     cv2.imshow("image", score_map)
+#     cv2.waitKey(0)
+#     cv2.destroyAllWindows()        
 
 
 """
@@ -122,17 +117,13 @@ TEST FORWARD AND BACKWARD FULL
 
 # TARGET_SIZE = 512
 
-# PREPROCESSED_DIRECTORY = "data/preprocess"
-# PREPROCESSED_DIRECTORY_TRAIN_IMAGES = f"{PREPROCESSED_DIRECTORY}/train/images"
-# PREPROCESSED_DIRECTORY_TRAIN_LABEL = f"{PREPROCESSED_DIRECTORY}/train/label"
-
 # if __name__ == "__main__":
 #     image_paths = natsorted(glob(f"{IMAGE_PATH}/*"))
 #     label_paths = natsorted(glob(f"{LABEL_PATH}/*"))
     
 #     for i, (image_path, label_path) in enumerate(zip(image_paths, label_paths)):
 #         print(f"Processing image: {image_path}, label: {label_path}")
-#         image, label_mask, geo_map, n_q_star_map = gen_label(img_path=image_path, label_path=label_path, target_size=TARGET_SIZE)     
+#         image, label_mask, geo_map = gen_label_V2(img_path=image_path, label_path=label_path, target_size=TARGET_SIZE)     
 
     # input = torch.from_numpy(image).permute(0, 3, 1, 2).to(dtype=torch.float32).to("cuda")
     # score_target = torch.from_numpy(label_mask[np.newaxis, np.newaxis, :]).to(dtype=torch.float32).to("cuda")
@@ -149,18 +140,20 @@ TEST FORWARD AND BACKWARD FULL
 TEST_END-2-END Training with DataLoader
 """
 
-IMAGE_PATH = "/home/huan/prjdir/east-text-detection/data/ICDAR_2015/train_images"
-LABEL_PATH = "/home/huan/prjdir/east-text-detection/data/ICDAR_2015/train_label"
+IMAGE_PATH = "/home/huan/prjdir/east-text-detection/data/text-detection/train/training_images"
+LABEL_PATH = "/home/huan/prjdir/east-text-detection/data/text-detection/train/label"
 
-EPOCH = 5
+IMAGE_PATH = "/home/huan/prjdir/east-text-detection/data/text-detection/train/train_1"
+LABEL_PATH = "/home/huan/prjdir/east-text-detection/data/text-detection/train/label_1"
 
+EPOCH = 1000
 
 if __name__ == "__main__":
-    np.set_printoptions(threshold=np.inf)
+    # np.set_printoptions(threshold=np.inf)
     
     model = EASTNet().cuda()
     dataset = EastDataset(images_folder=IMAGE_PATH, annotations_folder=LABEL_PATH, target_size=512, is_cuda=True)
-    dataloader = DataLoader(dataset, batch_size=1, shuffle=True, drop_last=True)
+    dataloader = DataLoader(dataset, batch_size=1, shuffle=True, drop_last=False)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     criteria = EASTLoss()
     
@@ -174,11 +167,10 @@ if __name__ == "__main__":
             loss = criteria(output["y_score"], label_mask, output["y_geo"], geo_map)
             loss.backward()
             optimizer.step()
-            # raise ValueError("STOP")
             
             running_loss += loss.item()
-            if i % 10 == 0:
-                print(f" Epoch: {epoch+1}, Step: {i+1}, Loss: {running_loss/10}")
+            if i % 4 == 0 and i != 0:
+                print(f" Epoch: {epoch+1}, Step: {i+1}, Loss: {running_loss/5}")
                 running_loss = 0.0    
     
         

@@ -61,3 +61,11 @@ def cal_shortest_edge_length(quadrilateral):
     
     lengths = np.sqrt(np.sum(np.square(quadrilateral - np.roll(quadrilateral, -1, axis=0)), axis=1))
     return np.min(lengths)    
+
+def is_array_contain_only_item_of_subset(array, subset):
+    unique_values = np.unique(array)
+
+    if set(unique_values).issubset(subset):
+        print(f"The array contains only item in subset.")
+    else:
+        print("The array contains values other than item in subset.")

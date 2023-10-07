@@ -12,6 +12,7 @@ def L2(p1, p2):
 if __name__ == '__main__':
 
     mat = np.zeros((300, 300, 3), dtype=np.uint8)
+    score_map = np.zeros((300, 300, 1), dtype=np.uint8)
     cv2.line(mat, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), (240, 120, 30), 2)
     cv2.line(mat, (int(p2[0]), int(p2[1])), (int(p3[0]), int(p3[1])), (240, 120, 30), 2)
     cv2.line(mat, (int(p3[0]), int(p3[1])), (int(p4[0]), int(p4[1])), (240, 120, 30), 2)
@@ -133,8 +134,17 @@ if __name__ == '__main__':
     poly = poly.reshape((-1, 1, 2))
     
     cv2.fillPoly(mat, [poly], (255, 255, 255))
+    cv2.fillPoly(score_map, [poly], 255)
     
-    cv2.imshow("kekw", mat)
+    unique_values = np.unique(score_map)
+
+    if set(unique_values).issubset({0, 255}):
+        print("The array contains only 0 or 255.")
+    else:
+        print("The array contains values other than 0 and 255.")
+    
+    # cv2.imshow("kekw", mat)
+    cv2.imshow("kekw score", score_map)
     cv2.waitKey(0)  
     cv2.destroyAllWindows()
 

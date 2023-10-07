@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import Dataset
 from natsort import natsorted
 from glob import glob
-from .gen_label import gen_label
+from .gen_label import gen_label, gen_label_V2
 import numpy as np
 
 class EastDataset(Dataset):
@@ -18,8 +18,8 @@ class EastDataset(Dataset):
         return len(self.image_paths)
     
     def __getitem__(self, idx):
-        # print(f"Current index: {self.image_paths[idx]}")
-        image, score_map, geo_map = gen_label(img_path=self.image_paths[idx],
+        # print(f"Image: {self.image_paths[idx]}")
+        image, score_map, geo_map = gen_label_V2(img_path=self.image_paths[idx],
                                                label_path=self.label_paths[idx],
                                                target_size=self.target_size)
         if self.is_cuda:

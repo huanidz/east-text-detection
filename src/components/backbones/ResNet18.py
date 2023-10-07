@@ -78,35 +78,25 @@ class ResNet(nn.Module):
         self.bn1 = nn.BatchNorm2d(self.in_channels)
         self.relu = nn.ReLU(inplace=True)
         self.layer1 = self._make_layer(block, 64, layers[0], stride=1)
-        self.layer2 = self._make_layer(block, network_scale_channels, layers[1], stride=1)
-        self.layer3 = self._make_layer(block, network_scale_channels, layers[2], stride=1)
-        self.layer4 = self._make_layer(block, network_scale_channels, layers[3], stride=1)
+        self.layer2 = self._make_layer(block, 128, layers[1], stride=1)
+        self.layer3 = self._make_layer(block, 128, layers[2], stride=1)
+        self.layer4 = self._make_layer(block, 128, layers[3], stride=1)
 
-    def _make_layer(
-        self, 
-        block: Type[BasicBlock],
-        out_channels: int,
-        blocks: int,
-        stride: int = 1,
-    ) -> nn.Sequential:
+    def _make_layer(self, block: Type[BasicBlock], out_channels: int, blocks: int, stride: int = 1) -> nn.Sequential:
         downsample = None
-        if stride != 1:
-            downsample = nn.Sequential(
-                nn.Conv2d(
-                    self.in_channels, 
-                    out_channels*self.expansion,
-                    kernel_size=1,
-                    stride=stride,
-                    bias=False 
-                ),
-                nn.BatchNorm2d(out_channels * self.expansion),
-            )
-        layers = []
-        layers.append(
-            block(
-                self.in_channels, out_channels, stride, self.expansion, downsample
-            )
+        # if stride != 1:
+        downsample = nn.Sequential(
+            nn.Conv2d(
+                self.in_channels, 
+                out_channels*self.expansion,
+                kernel_size=1,
+                stride=stride,
+                bias=False 
+            ),
+            nn.BatchNorm2d(out_channels * self.expansion),
         )
+        layers = []
+        layers.append(block(self.in_channels, out_channels, stride, self.expansion, downsample))
         self.in_channels = out_channels * self.expansion
         for i in range(1, blocks):
             layers.append(block(
